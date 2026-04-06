@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Embroidify Pro - Advanced Embroidery Digitizer</title>
+    <title>Embroidify Pro - Live Auto-Digitizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .checkerboard {
-            background-color: #0f172a; /* slate-900 */
+            background-color: #0f172a; 
             background-image: 
                 linear-gradient(45deg, #1e293b 25%, transparent 25%, transparent 75%, #1e293b 75%, #1e293b),
                 linear-gradient(45deg, #1e293b 25%, transparent 25%, transparent 75%, #1e293b 75%, #1e293b);
@@ -20,22 +20,26 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
-        #loadingOverlay { display: none; }
-        .is-loading #loadingOverlay { display: flex; }
+        input[type=range] { accent-color: #6366f1; cursor: pointer; }
         
-        /* Range slider styling */
-        input[type=range] { accent-color: #6366f1; } /* indigo-500 */
+        .pulse-border {
+            animation: borderPulse 2s infinite;
+        }
+        @keyframes borderPulse {
+            0% { border-color: rgba(99, 102, 241, 0.4); }
+            50% { border-color: rgba(99, 102, 241, 1); }
+            100% { border-color: rgba(99, 102, 241, 0.4); }
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-300 font-sans min-h-screen flex flex-col h-screen overflow-hidden">
 
-    <!-- Header -->
     <header class="bg-slate-950 text-white shadow-md py-3 px-6 flex items-center justify-between z-10 shrink-0 border-b border-slate-800">
         <div class="flex items-center gap-3">
             <i class="fa-solid fa-layer-group text-2xl text-indigo-400"></i>
             <div>
                 <h1 class="text-xl font-bold tracking-tight">Embroidify <span class="text-indigo-400">Pro</span></h1>
-                <p class="text-slate-500 text-xs">Advanced Auto-Digitizer & .DST/.EXP Viewer</p>
+                <p class="text-slate-500 text-xs">Live Auto-Digitizer & .DST/.EXP Viewer</p>
             </div>
         </div>
         <div class="flex gap-2">
@@ -45,19 +49,9 @@
         </div>
     </header>
 
-    <!-- Main Workspace -->
     <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-        
-        <!-- Loading Overlay -->
-        <div id="loadingOverlay" class="absolute inset-0 bg-slate-950/80 z-50 items-center justify-center backdrop-blur-sm">
-            <div class="bg-slate-900 border border-slate-700 px-8 py-6 rounded-xl shadow-2xl flex flex-col items-center">
-                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-500 mb-4"></i>
-                <p class="text-lg font-bold text-slate-200" id="loadingText">Processing...</p>
-            </div>
-        </div>
 
-        <!-- Left Sidebar: Controls -->
-        <aside class="w-full lg:w-96 bg-slate-900 border-r border-slate-800 flex flex-col overflow-y-auto custom-scrollbar shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-10">
+        <aside class="w-full lg:w-96 bg-slate-900 border-r border-slate-800 flex flex-col overflow-y-auto custom-scrollbar shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-10 relative">
             
             <div class="p-5 border-b border-slate-800">
                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Step 1: Input</label>
@@ -68,9 +62,14 @@
                 </div>
             </div>
 
-            <!-- Image Digitizing: Base Extraction -->
-            <div id="phaseExtract" class="p-5 border-b border-slate-800">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Step 2: Base Extraction</label>
+            <div id="phaseExtract" class="p-5 border-b border-slate-800 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">Step 2: Base Settings</label>
+                    <button id="btnAutoDetect" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-1.5 px-3 rounded shadow-sm transition flex items-center border border-indigo-400">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> Auto-Detect
+                    </button>
+                </div>
+                
                 <div class="space-y-4">
                     <div>
                         <div class="flex justify-between text-sm mb-1">
@@ -90,26 +89,23 @@
                         <input type="checkbox" id="ignoreWhite" class="w-4 h-4 accent-indigo-500 rounded bg-slate-800 border-slate-600" checked>
                         <label for="ignoreWhite" class="text-sm text-slate-400 cursor-pointer hover:text-slate-200 transition">Ignore white background</label>
                     </div>
-                    <button id="btnExtract" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg transition border border-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                        <i class="fa-solid fa-palette mr-2"></i>Extract Shapes & Colors
-                    </button>
                 </div>
             </div>
 
-            <!-- Image Digitizing: Path Adjustments -->
-            <div id="phaseAdjust" class="p-5 border-b border-slate-800 hidden bg-slate-800/30">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Step 3: Path Adjustments</label>
+            <div id="phaseAdjust" class="p-5 border-b border-slate-800 hidden bg-slate-800/20">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">Step 3: Path Tweaks</label>
+                    <span class="text-[10px] text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-500/20"><i class="fa-solid fa-bolt mr-1"></i>Live</span>
+                </div>
                 
                 <div class="space-y-5">
-                    <!-- Global Settings -->
                     <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700 shadow-inner space-y-4">
                         <div>
                             <div class="flex justify-between text-xs mb-1 text-slate-400 font-medium">
                                 <span>Density (Spacing)</span>
                                 <span class="text-slate-300"><span id="densityVal">0.4</span> mm</span>
                             </div>
-                            <input type="range" id="densitySlider" min="0.2" max="1.0" value="0.4" step="0.1" class="w-full">
-                            <p class="text-[9px] text-slate-500 leading-tight mt-1">Lower = tighter stitches. 0.4mm is standard.</p>
+                            <input type="range" id="densitySlider" min="0.2" max="1.0" value="0.4" step="0.05" class="w-full">
                         </div>
                         <div>
                             <div class="flex justify-between text-xs mb-1 text-slate-400 font-medium">
@@ -117,7 +113,6 @@
                                 <span class="text-slate-300"><span id="angleVal">15</span>°</span>
                             </div>
                             <input type="range" id="angleSlider" min="0" max="180" value="15" step="5" class="w-full">
-                            <p class="text-[9px] text-slate-500 leading-tight mt-1">Angles shapes to prevent push/pull distortion.</p>
                         </div>
                         <div>
                             <div class="flex justify-between text-xs mb-1 text-slate-400 font-medium">
@@ -125,7 +120,6 @@
                                 <span class="text-slate-300"><span id="pullVal">0.2</span> mm</span>
                             </div>
                             <input type="range" id="pullSlider" min="0" max="0.6" value="0.2" step="0.1" class="w-full">
-                            <p class="text-[9px] text-slate-500 leading-tight mt-1">Extends edges so tension doesn't create gaps.</p>
                         </div>
                         <div class="pt-2 border-t border-slate-700 flex items-center justify-between">
                             <span class="text-xs font-medium text-slate-300">Enable Underlay</span>
@@ -136,46 +130,55 @@
                         </div>
                     </div>
 
-                    <!-- Layer Control -->
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-2">Color Layers (Visibility)</label>
                         <div id="layerContainer" class="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar p-1">
-                            <!-- Injected by JS -->
-                        </div>
+                            </div>
                     </div>
-
-                    <button id="btnGenerate" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg shadow-md transition">
-                        <i class="fa-solid fa-microchip mr-2"></i>Generate Needle Path
-                    </button>
                 </div>
             </div>
 
-            <!-- Viewer Controls Message -->
             <div id="viewerControls" class="hidden p-5 border-b border-slate-800 bg-emerald-900/20">
                 <p class="text-sm text-emerald-400 font-bold mb-2"><i class="fa-solid fa-eye mr-2"></i>Viewer Mode Active</p>
                 <p class="text-xs text-emerald-300/80 leading-relaxed">Pre-digitized machine file loaded. Stitch coordinates parsed and mapped.</p>
             </div>
 
-            <!-- Export Options -->
             <div id="exportSection" class="p-5 mt-auto bg-slate-900/80 border-t border-slate-800 hidden">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Step 4: Download</label>
-                <div class="space-y-2">
-                    <button id="btnExportDST" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium py-2.5 px-4 rounded-md transition flex items-center justify-between border border-indigo-500 shadow-sm">
-                        <span><i class="fa-solid fa-download mr-2"></i>.DST File</span>
-                        <span class="text-[10px] bg-indigo-800/80 px-1.5 py-0.5 rounded text-indigo-100 border border-indigo-400/30">Universal</span>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Step 4: Download Formats</label>
+                
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <button id="btnExportDST" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium py-2.5 px-3 rounded transition flex flex-col items-center justify-center border border-indigo-500 shadow-sm pulse-border gap-1">
+                        <i class="fa-solid fa-download text-lg"></i>
+                        <span>.DST (Universal)</span>
                     </button>
-                    <button id="btnExportEXP" class="w-full bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-200 text-sm font-medium py-2 px-4 rounded-md transition flex items-center justify-between">
-                        <span><i class="fa-solid fa-download mr-2"></i>.EXP File</span>
-                        <span class="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700">Melco</span>
+                    <button id="btnExportEXP" class="bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-200 text-xs font-medium py-2.5 px-3 rounded transition flex flex-col items-center justify-center gap-1">
+                        <i class="fa-solid fa-download text-lg"></i>
+                        <span>.EXP (Melco)</span>
                     </button>
                 </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btnExportSVG" class="bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-200 text-xs font-medium py-2 px-3 rounded transition flex items-center justify-center gap-2" title="Vector paths for laser cutting or plotting">
+                        <i class="fa-solid fa-bezier-curve"></i>
+                        <span>.SVG (Vector)</span>
+                    </button>
+                    <button id="btnExportCSV" class="bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-200 text-xs font-medium py-2 px-3 rounded transition flex items-center justify-center gap-2" title="Raw coordinate data for CNC or Python">
+                        <i class="fa-solid fa-table"></i>
+                        <span>.CSV (Data)</span>
+                    </button>
+                </div>
+                <p class="text-[9px] text-slate-500 mt-3 text-center">Note: Most proprietary home machines (Husqvarna, Brother, etc.) can natively read the universal .DST format.</p>
             </div>
         </aside>
 
-        <!-- Right Content: Viewer -->
         <section class="flex-1 bg-slate-950 flex flex-col p-4 overflow-hidden relative">
             
-            <!-- Statistics -->
+            <div id="canvasOverlay" class="absolute inset-0 z-20 hidden items-center justify-center bg-slate-950/50 backdrop-blur-[2px] transition-opacity">
+                <div class="bg-slate-800 border border-slate-700 px-5 py-3 rounded-lg shadow-xl flex items-center gap-3">
+                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-400"></i>
+                    <p class="font-medium text-sm text-slate-200" id="loadingText">Updating Preview...</p>
+                </div>
+            </div>
+
             <div id="statsOverlay" class="absolute top-6 left-6 z-10 bg-slate-900/90 backdrop-blur shadow-xl border border-slate-700 rounded-lg p-3 hidden pointer-events-none">
                 <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Production Stats</div>
                 <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
@@ -188,7 +191,6 @@
                 </div>
             </div>
 
-            <!-- Canvas Container -->
             <div class="flex-1 rounded-xl border border-slate-800 shadow-inner overflow-hidden checkerboard flex items-center justify-center relative cursor-crosshair">
                 <p id="placeholderText" class="text-slate-600 font-medium flex flex-col items-center">
                     <i class="fa-solid fa-ruler-combined text-5xl mb-4 opacity-30"></i>
@@ -213,25 +215,73 @@
         const exportSection = document.getElementById('exportSection');
         const modeBadge = document.getElementById('modeBadge');
         
-        const btnExtract = document.getElementById('btnExtract');
-        const btnGenerate = document.getElementById('btnGenerate');
+        const btnAutoDetect = document.getElementById('btnAutoDetect');
         const layerContainer = document.getElementById('layerContainer');
         const outputCanvas = document.getElementById('outputCanvas');
         const ctx = outputCanvas.getContext('2d');
         const placeholderText = document.getElementById('placeholderText');
-
-        // Sync Sliders
-        const syncSlider = (id) => {
-            document.getElementById(id+'Slider').addEventListener('input', e => document.getElementById(id+'Val').textContent = e.target.value);
-        }
-        syncSlider('colors'); syncSlider('size'); syncSlider('density'); syncSlider('angle'); syncSlider('pull');
+        const canvasOverlay = document.getElementById('canvasOverlay');
 
         // Advanced State Engine
-        let rawPixelGroups = {}; // Hex -> Array of {cx, cy} in absolute DST units (1 unit = 0.1mm)
-        let activeColors = new Set(); // Set of hex codes
-        let stitchPath = [];      // Absolute coordinate path {x, y, type}
-        let renderColors = [];    // Colors currently active for rendering
-        const viewerPalette = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"]; // Brighter for dark mode
+        let rawPixelGroups = {}; 
+        let activeColors = new Set(); 
+        let stitchPath = [];      
+        let renderColors = [];    
+        const viewerPalette = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"]; 
+
+        // Debounce utility for live updates
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        const showLoading = (text = "Updating Preview...") => {
+            document.getElementById('loadingText').textContent = text;
+            canvasOverlay.classList.remove('hidden');
+            canvasOverlay.classList.add('flex');
+        }
+        const hideLoading = () => {
+            canvasOverlay.classList.add('hidden');
+            canvasOverlay.classList.remove('flex');
+        }
+
+        // --- Event Binding for Live Updates ---
+        const liveExtract = debounce(() => {
+            showLoading("Extracting colors...");
+            setTimeout(() => {
+                try { extractShapes(); } catch(e) { console.error(e); }
+                hideLoading();
+            }, 50);
+        }, 600);
+
+        const liveGenerate = debounce(() => {
+            showLoading("Applying stitch paths...");
+            setTimeout(() => {
+                try { generateMachinePath(); renderPreview(); } catch(e) { console.error(e); }
+                hideLoading();
+            }, 20);
+        }, 200);
+
+        const bindSlider = (id, isExtractPhase) => {
+            const el = document.getElementById(id+'Slider');
+            el.addEventListener('input', e => {
+                document.getElementById(id+'Val').textContent = e.target.value;
+                if(isExtractPhase) liveExtract();
+                else liveGenerate();
+            });
+        }
+        
+        bindSlider('colors', true);
+        bindSlider('size', true);
+        document.getElementById('ignoreWhite').addEventListener('change', liveExtract);
+        
+        bindSlider('density', false);
+        bindSlider('angle', false);
+        bindSlider('pull', false);
+        document.getElementById('underlayToggle').addEventListener('change', liveGenerate);
 
         // --- 1. File Upload Routing ---
         fileInput.addEventListener('change', (e) => {
@@ -240,16 +290,14 @@
             
             uploadText.textContent = file.name;
             const ext = file.name.split('.').pop().toLowerCase();
-            
             resetUI();
             
             if (ext === 'dst' || ext === 'exp') {
-                // Viewer Mode
-                phaseExtract.classList.add('hidden');
                 viewerControls.classList.remove('hidden');
                 modeBadge.classList.remove('hidden');
-                
+                placeholderText.classList.add('hidden');
                 showLoading(`Parsing .${ext.toUpperCase()}...`);
+                
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     setTimeout(() => { 
@@ -257,10 +305,8 @@
                             const buffer = ev.target.result;
                             const relativeCmds = ext === 'dst' ? parseDST(buffer) : parseEXP(buffer);
                             buildAbsolutePath(relativeCmds);
-                            
                             renderColors = [];
                             for(let i=0; i<30; i++) renderColors.push(viewerPalette[i % viewerPalette.length]);
-                            
                             renderPreview();
                             exportSection.classList.remove('hidden');
                         } catch (err) { alert("Error parsing file: " + err.message); }
@@ -268,15 +314,16 @@
                     }, 50);
                 };
                 reader.readAsArrayBuffer(file);
-                
             } else {
-                // Image Digitizer Mode
                 phaseExtract.classList.remove('hidden');
-                btnExtract.disabled = false;
-                placeholderText.innerHTML = '<i class="fa-solid fa-image text-indigo-500 text-5xl mb-3 opacity-80"></i><span class="text-slate-400">Image loaded. Extract colors!</span>';
+                phaseAdjust.classList.remove('hidden');
+                placeholderText.innerHTML = '<i class="fa-solid fa-image text-indigo-500 text-5xl mb-3 opacity-80"></i><span class="text-slate-400">Image loaded. Previewing...</span>';
                 
                 const reader = new FileReader();
-                reader.onload = (ev) => { sourceImage.src = ev.target.result; };
+                reader.onload = (ev) => { 
+                    sourceImage.src = ev.target.result; 
+                    sourceImage.onload = () => autoDetect();
+                };
                 reader.readAsDataURL(file);
             }
         });
@@ -286,453 +333,19 @@
             exportSection.classList.add('hidden');
             document.getElementById('statsOverlay').classList.add('hidden');
             viewerControls.classList.add('hidden');
+            phaseExtract.classList.add('hidden');
             phaseAdjust.classList.add('hidden');
             modeBadge.classList.add('hidden');
-            phaseExtract.classList.remove('opacity-50', 'pointer-events-none');
             placeholderText.classList.remove('hidden');
-            rawPixelGroups = {};
-            activeColors.clear();
-            stitchPath = [];
+            rawPixelGroups = {}; activeColors.clear(); stitchPath = [];
         }
 
-        const showLoading = (text) => {
-            document.getElementById('loadingText').textContent = text;
-            document.body.classList.add('is-loading');
-        }
-        const hideLoading = () => document.body.classList.remove('is-loading');
+        // --- Auto Detect Logic ---
+        btnAutoDetect.addEventListener('click', () => autoDetect());
 
-        // --- 2. Phase: Shape Extraction (K-Means) ---
-        btnExtract.addEventListener('click', () => {
-            showLoading("Extracting shapes and palettes...");
-            setTimeout(() => {
-                try { extractShapes(); } catch(err) { alert("Extraction error: " + err.message); }
-                hideLoading();
-            }, 50);
-        });
-
-        function extractShapes() {
+        function autoDetect() {
             if (!sourceImage.src) return;
-
-            const targetColors = parseInt(document.getElementById('colorsSlider').value);
-            const widthCm = parseInt(document.getElementById('sizeSlider').value);
-            const skipWhite = document.getElementById('ignoreWhite').checked;
-
-            // Internal processing resolution (fixed around 120px wide to prevent browser crash, independent of physical size)
-            const processWidth = 120; 
-            const aspectRatio = sourceImage.height / sourceImage.width;
-            const processHeight = Math.round(processWidth * aspectRatio);
-
-            // Calculate Physical Scaling (1 DST unit = 0.1mm. 1cm = 100 DST units).
-            const targetDstUnits = widthCm * 100; 
-            const dstMultiplier = targetDstUnits / processWidth;
-
-            // Downsample for processing
-            const offCanvas = document.createElement('canvas');
-            offCanvas.width = processWidth; offCanvas.height = processHeight;
-            const offCtx = offCanvas.getContext('2d', {willReadFrequently: true});
-            offCtx.drawImage(sourceImage, 0, 0, processWidth, processHeight);
-            const imgData = offCtx.getImageData(0, 0, processWidth, processHeight).data;
-
-            // Collect valid pixels
-            let colors = [];
-            for (let i = 0; i < imgData.length; i += 4) {
-                const r = imgData[i], g = imgData[i+1], b = imgData[i+2], a = imgData[i+3];
-                if (a < 128 || (skipWhite && r > 240 && g > 240 && b > 240)) continue;
-                colors.push({r, g, b});
-            }
-
-            if(colors.length === 0) { alert("No valid colors found."); return; }
-
-            // Quantize
-            const centroids = runKMeans(colors, targetColors);
-            rawPixelGroups = {};
-            centroids.forEach(c => rawPixelGroups[rgbToHex(c.r,c.g,c.b)] = []);
-
-            // Map image to physical coordinates from center
-            for (let y = 0; y < processHeight; y++) {
-                for (let x = 0; x < processWidth; x++) {
-                    const idx = (y * processWidth + x) * 4;
-                    if (imgData[idx+3] < 128) continue;
-                    if (skipWhite && imgData[idx] > 240 && imgData[idx+1] > 240 && imgData[idx+2] > 240) continue;
-
-                    let nearest = centroids[0], minDist = colorDist(imgData[idx], imgData[idx+1], imgData[idx+2], nearest.r, nearest.g, nearest.b);
-                    for (let c = 1; c < centroids.length; c++) {
-                        let d = colorDist(imgData[idx], imgData[idx+1], imgData[idx+2], centroids[c].r, centroids[c].g, centroids[c].b);
-                        if (d < minDist) { minDist = d; nearest = centroids[c]; }
-                    }
-                    
-                    // Convert to Absolute DST units from center
-                    const cx = (x - processWidth/2) * dstMultiplier;
-                    const cy = (y - processHeight/2) * dstMultiplier;
-                    rawPixelGroups[rgbToHex(nearest.r, nearest.g, nearest.b)].push({cx, cy});
-                }
-            }
-
-            // Build Layer UI
-            layerContainer.innerHTML = '';
-            activeColors.clear();
+            showLoading("Auto-detecting optimal settings...");
             
-            // Sort by size (largest block first = sews first = background)
-            const sortedHexes = Object.keys(rawPixelGroups).sort((a,b) => rawPixelGroups[b].length - rawPixelGroups[a].length);
-            
-            sortedHexes.forEach((hex, i) => {
-                if (rawPixelGroups[hex].length === 0) return;
-                activeColors.add(hex);
-                
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between bg-slate-800 border border-slate-700 px-3 py-2 rounded text-sm mb-1.5 shadow-sm";
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-4 h-4 rounded shadow-inner border border-white/10" style="background:${hex}"></div>
-                        <span class="font-mono text-xs text-slate-300">Seq ${i+1}</span>
-                    </div>
-                    <input type="checkbox" class="w-4 h-4 accent-indigo-500 bg-slate-700 border-slate-600" value="${hex}" checked>
-                `;
-                // Checkbox event
-                div.querySelector('input').addEventListener('change', (e) => {
-                    if (e.target.checked) activeColors.add(e.target.value);
-                    else activeColors.delete(e.target.value);
-                });
-                layerContainer.appendChild(div);
-            });
-
-            // Unlock next phase
-            phaseAdjust.classList.remove('hidden');
-            phaseExtract.classList.add('opacity-50', 'pointer-events-none'); // Lock previous
-            placeholderText.innerHTML = '<i class="fa-solid fa-sliders text-indigo-500 text-5xl mb-3 opacity-80"></i><span class="text-slate-400">Configure adjustments & Generate.</span>';
-        }
-
-        // --- 3. Phase: Path Generation (Advanced Sweep-Line Algorithm) ---
-        btnGenerate.addEventListener('click', () => {
-            showLoading("Applying Sweep-Line Algorithms...");
             setTimeout(() => {
-                try {
-                    generateMachinePath();
-                    renderPreview();
-                    exportSection.classList.remove('hidden');
-                    placeholderText.classList.add('hidden');
-                } catch(err) { alert("Path generation error: " + err.message); }
-                hideLoading();
-            }, 50);
-        });
-
-        function generateMachinePath() {
-            // Get settings
-            const densityMm = parseFloat(document.getElementById('densitySlider').value);
-            const spacing = densityMm * 10; // Convert mm to DST units
-            const angleDeg = parseFloat(document.getElementById('angleSlider').value);
-            const pullCompMm = parseFloat(document.getElementById('pullSlider').value);
-            const pullComp = pullCompMm * 10; // DST units
-            const useUnderlay = document.getElementById('underlayToggle').checked;
-            
-            // Physical threshold to jump instead of sewing continuous thread (15 DST units = 1.5mm)
-            const jumpThreshold = 20; 
-
-            stitchPath = [];
-            renderColors = [];
-
-            // Iterate active layers (largest to smallest)
-            const sortedHexes = Object.keys(rawPixelGroups).sort((a,b) => rawPixelGroups[b].length - rawPixelGroups[a].length);
-            
-            sortedHexes.forEach(hex => {
-                if (!activeColors.has(hex) || rawPixelGroups[hex].length === 0) return;
-                
-                if (stitchPath.length > 0) stitchPath.push({type: 'color_change'});
-                renderColors.push(hex);
-
-                const pixels = rawPixelGroups[hex];
-
-                // 1. Generate Underlay (Perpendicular, sparse, no pull comp)
-                if (useUnderlay) {
-                    const underlayPath = executeSweepFill(pixels, angleDeg + 90, spacing * 3.5, 0, jumpThreshold);
-                    stitchPath = stitchPath.concat(underlayPath);
-                }
-
-                // 2. Generate Main Fill
-                const mainPath = executeSweepFill(pixels, angleDeg, spacing, pullComp, jumpThreshold);
-                stitchPath = stitchPath.concat(mainPath);
-            });
-
-            stitchPath.push({type: 'end'});
-        }
-
-        function executeSweepFill(pixels, angleDeg, spacing, pullComp, jumpThreshold) {
-            let path = [];
-            let rad = -angleDeg * Math.PI / 180;
-            
-            // 1. Rotate points to horizontally align the intended fill angle
-            let rotated = pixels.map(p => ({
-                x: p.cx * Math.cos(rad) - p.cy * Math.sin(rad),
-                y: p.cx * Math.sin(rad) + p.cy * Math.cos(rad)
-            }));
-
-            // 2. Group into horizontal bands (sweep lines) based on density spacing
-            let bands = {};
-            rotated.forEach(p => {
-                let yBucket = Math.round(p.y / spacing) * spacing;
-                if (!bands[yBucket]) bands[yBucket] = [];
-                bands[yBucket].push(p.x);
-            });
-
-            let sortedY = Object.keys(bands).map(Number).sort((a,b) => a-b);
-            let direction = 1;
-
-            // 3. Connect segments
-            for (let y of sortedY) {
-                let xs = bands[y].sort((a,b)=>a-b);
-                let segments = [];
-                let currentSeg = {minX: xs[0], maxX: xs[0]};
-                
-                // Identify continuous shapes on this scanline
-                for (let i = 1; i < xs.length; i++) {
-                    if (xs[i] - currentSeg.maxX > jumpThreshold) { // Gap found
-                        segments.push(currentSeg);
-                        currentSeg = {minX: xs[i], maxX: xs[i]};
-                    } else {
-                        currentSeg.maxX = xs[i];
-                    }
-                }
-                segments.push(currentSeg);
-
-                // Filter tiny artifacts (less than 0.5mm)
-                segments = segments.filter(seg => (seg.maxX - seg.minX) > 5);
-                if (segments.length === 0) continue;
-
-                if (direction === -1) segments.reverse();
-
-                for (let seg of segments) {
-                    // Apply Pull Compensation (stretch line slightly)
-                    let startX = (direction === 1 ? seg.minX : seg.maxX) + (direction === 1 ? -pullComp : pullComp);
-                    let endX = (direction === 1 ? seg.maxX : seg.minX) + (direction === 1 ? pullComp : -pullComp);
-                    
-                    // Add Jump to start of row
-                    path.push({rx: startX, ry: y, type: 'jump'});
-                    // Stitch to end of row
-                    path.push({rx: endX, ry: y, type: 'stitch'});
-                }
-                direction *= -1; // Zig-Zag alternating direction
-            }
-
-            // 4. Rotate generated path back to original canvas orientation
-            let backRad = angleDeg * Math.PI / 180;
-            return path.map(p => ({
-                x: Math.round(p.rx * Math.cos(backRad) - p.ry * Math.sin(backRad)),
-                y: Math.round(p.rx * Math.sin(backRad) + p.ry * Math.cos(backRad)),
-                type: p.type
-            }));
-        }
-
-        // --- 4. Render Engine ---
-        function renderPreview() {
-            outputCanvas.classList.remove('hidden');
-            document.getElementById('statsOverlay').classList.remove('hidden');
-
-            // Determine bounds
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            stitchPath.forEach(p => {
-                if(p.x !== undefined) {
-                    if(p.x < minX) minX = p.x; if(p.x > maxX) maxX = p.x;
-                    if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y;
-                }
-            });
-            if (minX === Infinity) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
-            
-            let pathW = maxX - minX, pathH = maxY - minY;
-
-            const renderSize = 800; const padding = 40;
-            outputCanvas.width = renderSize; outputCanvas.height = renderSize;
-            ctx.clearRect(0, 0, renderSize, renderSize);
-
-            // Scale to fit canvas mathematically
-            const scaleX = (renderSize - padding*2) / (pathW || 1);
-            const scaleY = (renderSize - padding*2) / (pathH || 1);
-            const scale = Math.min(scaleX, scaleY);
-            const offsetX = padding - (minX * scale) + ((renderSize - padding*2 - pathW*scale) / 2);
-            const offsetY = padding - (minY * scale) + ((renderSize - padding*2 - pathH*scale) / 2);
-
-            ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-
-            let curX = 0, curY = 0, colorIdx = 0;
-            let stats = { stitches: 0, jumps: 0, colors: Math.max(1, renderColors.length) };
-
-            stitchPath.forEach(cmd => {
-                if (cmd.type === 'color_change') { colorIdx++; return; }
-                if (cmd.type === 'end') return;
-
-                let drawX = offsetX + (cmd.x * scale);
-                let drawY = offsetY + (cmd.y * scale); // Browser Y is inverted from Machine Y, visual is fine.
-
-                ctx.beginPath();
-                ctx.moveTo(offsetX + (curX * scale), offsetY + (curY * scale));
-                ctx.lineTo(drawX, drawY);
-
-                if (cmd.type === 'jump') {
-                    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
-                    ctx.setLineDash([3, 4]);
-                    stats.jumps++;
-                } else {
-                    ctx.strokeStyle = renderColors[colorIdx] || '#94a3b8';
-                    ctx.setLineDash([]);
-                    ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
-                    stats.stitches++;
-                }
-                ctx.stroke(); ctx.shadowColor = 'transparent';
-
-                curX = cmd.x; curY = cmd.y;
-            });
-
-            document.getElementById('statStitches').textContent = stats.stitches.toLocaleString();
-            document.getElementById('statColors').textContent = stats.colors;
-            document.getElementById('statJumps').textContent = stats.jumps.toLocaleString();
-        }
-
-        // --- 5. Export Encoding Engines ---
-        function buildRelativePath() {
-            let cmds = [], curX = 0, curY = 0, maxX = -Infinity, minX = Infinity, maxY = -Infinity, minY = Infinity;
-            stitchPath.forEach(cmd => {
-                if (cmd.type === 'color_change' || cmd.type === 'end') { cmds.push({dx: 0, dy: 0, type: cmd.type}); return; }
-                let targetX = cmd.x, targetY = -cmd.y; // Correct Y-Axis for Machine (Up is Positive)
-                let dx = targetX - curX, dy = targetY - curY;
-                
-                while (dx !== 0 || dy !== 0) {
-                    let stepX = Math.min(121, Math.max(-121, dx)), stepY = Math.min(121, Math.max(-121, dy));
-                    let isJump = (cmd.type === 'jump') || (dx !== stepX || dy !== stepY);
-                    cmds.push({dx: stepX, dy: stepY, type: isJump ? 'jump' : 'stitch'});
-                    curX += stepX; curY += stepY; dx -= stepX; dy -= stepY;
-                    if(curX > maxX) maxX = curX; if(curX < minX) minX = curX;
-                    if(curY > maxY) maxY = curY; if(curY < minY) minY = curY;
-                }
-            });
-            return { cmds, maxX, minX, maxY, minY };
-        }
-
-        function encodeTernary(val) {
-            let v = val, res = [];
-            for(let i=0; i<5; i++) {
-                let rem = v % 3; if (rem < 0) rem += 3;
-                if (rem === 2) { res.push(-1); v = Math.floor(v/3) + 1; } 
-                else { res.push(rem); v = Math.floor(v/3); }
-            }
-            return res;
-        }
-
-        document.getElementById('btnExportDST').addEventListener('click', () => {
-            const relData = buildRelativePath();
-            let binStitches = [];
-            relData.cmds.forEach(cmd => {
-                let tx = encodeTernary(cmd.dx), ty = encodeTernary(cmd.dy), b0=0, b1=0, b2=0;
-                if (ty[0]===1) b0|=0x01; if (ty[0]===-1) b0|=0x02; if (ty[2]===1) b0|=0x04; if (ty[2]===-1) b0|=0x08;
-                if (tx[2]===-1) b0|=0x10; if (tx[2]===1) b0|=0x20; if (tx[0]===-1) b0|=0x40; if (tx[0]===1) b0|=0x80;
-                if (ty[1]===1) b1|=0x01; if (ty[1]===-1) b1|=0x02; if (ty[3]===1) b1|=0x04; if (ty[3]===-1) b1|=0x08;
-                if (tx[3]===-1) b1|=0x10; if (tx[3]===1) b1|=0x20; if (tx[1]===-1) b1|=0x40; if (tx[1]===1) b1|=0x80;
-                if (ty[4]===1) b2|=0x20; if (ty[4]===-1) b2|=0x10; if (tx[4]===-1) b2|=0x08; if (tx[4]===1) b2|=0x04;
-                b2 |= 0x03;
-                if (cmd.type === 'jump') b2 |= 0x80;
-                if (cmd.type === 'color_change') b2 |= 0x40;
-                if (cmd.type === 'end') binStitches.push(0,0,0xF3);
-                else binStitches.push(b0, b1, b2);
-            });
-            const header = new Uint8Array(512); header.fill(32);
-            const pad = (v, len) => v.toString().padStart(len, ' ');
-            let hStr = `LA:Embroidify\rST:${pad(relData.cmds.length, 7)}\rCO:${pad(Math.max(0,renderColors.length-1), 3)}\r`;
-            hStr += `+X:${pad(relData.maxX, 5)}\r-X:${pad(Math.abs(relData.minX), 5)}\r+Y:${pad(relData.maxY, 5)}\r-Y:${pad(Math.abs(relData.minY), 5)}\rAX:+    0\rAY:+    0\rMX:+    0\rMY:+    0\rPD:******\r`;
-            for(let i=0; i<hStr.length; i++) header[i] = hStr.charCodeAt(i);
-            triggerDownload(new Blob([header, new Uint8Array(binStitches)]), 'embroidify_pro.dst');
-        });
-
-        document.getElementById('btnExportEXP').addEventListener('click', () => {
-            const relData = buildRelativePath();
-            let binStitches = [];
-            relData.cmds.forEach(cmd => {
-                if (cmd.type === 'color_change') { binStitches.push(0x80, 0x01, 0x00, 0x00); return; }
-                if (cmd.type === 'end') return;
-                if (cmd.type === 'jump') binStitches.push(0x80, 0x04);
-                binStitches.push(cmd.dx < 0 ? cmd.dx + 256 : cmd.dx, cmd.dy < 0 ? cmd.dy + 256 : cmd.dy);
-            });
-            triggerDownload(new Blob([new Uint8Array(binStitches)]), 'embroidify_pro.exp');
-        });
-
-        function triggerDownload(blob, filename) {
-            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
-        }
-
-        // --- Utils: Binary Decoders ---
-        function parseDST(buffer) {
-            let view = new Uint8Array(buffer), cmds = [];
-            for (let i = 512; i < view.length; i += 3) {
-                if (i + 2 >= view.length) break;
-                let b0 = view[i], b1 = view[i+1], b2 = view[i+2];
-                if (b0 === 0 && b1 === 0 && b2 === 0xF3) { cmds.push({dx: 0, dy: 0, type: 'end'}); break; }
-                let dx = 0, dy = 0;
-                if (b0&0x01) dx+=1; if (b0&0x02) dx-=1; if (b0&0x04) dx+=9; if (b0&0x08) dx-=9; if (b0&0x80) dy+=1; if (b0&0x40) dy-=1; if (b0&0x20) dy+=9; if (b0&0x10) dy-=9;
-                if (b1&0x01) dx+=3; if (b1&0x02) dx-=3; if (b1&0x04) dx+=27; if (b1&0x08) dx-=27; if (b1&0x80) dy+=3; if (b1&0x40) dy-=3; if (b1&0x20) dy+=27; if (b1&0x10) dy-=27;
-                if (b2&0x04) dx+=81; if (b2&0x08) dx-=81; if (b2&0x20) dy+=81; if (b2&0x10) dy-=81;
-                let type = 'stitch';
-                if ((b2 & 0xC3) === 0xC3 || (b2 & 0x40)) type = 'color_change';
-                else if (b2 & 0x80) type = 'jump';
-                cmds.push({dx, dy, type});
-            }
-            return cmds;
-        }
-
-        function parseEXP(buffer) {
-            let view = new Int8Array(buffer), uview = new Uint8Array(buffer), cmds = [], i = 0;
-            while (i < view.length - 1) {
-                if (uview[i] === 128) {
-                    if (uview[i+1] === 1) { cmds.push({dx: 0, dy: 0, type: 'color_change'}); i += 4; continue; }
-                    if (uview[i+1] === 4) { if (i+3 < view.length) cmds.push({dx: view[i+2], dy: view[i+3], type: 'jump'}); i += 4; continue; }
-                    if (uview[i+1] === 128) { i += 4; continue; }
-                }
-                cmds.push({dx: view[i], dy: view[i+1], type: 'stitch'}); i += 2;
-            }
-            cmds.push({dx: 0, dy: 0, type: 'end'}); return cmds;
-        }
-
-        function buildAbsolutePath(cmds) {
-            stitchPath = []; let curX = 0, curY = 0;
-            cmds.forEach(cmd => {
-                if (cmd.type === 'color_change' || cmd.type === 'end') { stitchPath.push({type: cmd.type}); return; }
-                curX += cmd.dx; curY += -cmd.dy; // Invert Y for screen rendering
-                stitchPath.push({x: curX, y: curY, type: cmd.type});
-            });
-        }
-
-        // --- Utils: Math ---
-        function runKMeans(pixels, k) {
-            let data = pixels.length > 5000 ? [...pixels].sort(()=>0.5-Math.random()).slice(0, 5000) : pixels;
-            let centroids = [], unique = [];
-            for(let p of data) {
-                let distinct = true;
-                for(let u of unique) { if(colorDist(p.r,p.g,p.b,u.r,u.g,u.b) < 800) { distinct = false; break; } }
-                if(distinct) { unique.push(p); if(unique.length >= k) break; }
-            }
-            while(unique.length < k) unique.push(data[Math.floor(Math.random() * data.length)]);
-            centroids = unique.slice(0, k);
-            let assignments = new Int32Array(data.length);
-            for (let iter = 0; iter < 15; iter++) {
-                for (let i = 0; i < data.length; i++) {
-                    let minD = Infinity, minI = 0;
-                    for (let c = 0; c < k; c++) { let d = colorDist(data[i].r, data[i].g, data[i].b, centroids[c].r, centroids[c].g, centroids[c].b); if (d < minD) { minD = d; minI = c; } }
-                    assignments[i] = minI;
-                }
-                let sums = Array(k).fill(0).map(()=>({r:0,g:0,b:0,count:0}));
-                for (let i = 0; i < data.length; i++) { sums[assignments[i]].r += data[i].r; sums[assignments[i]].g += data[i].g; sums[assignments[i]].b += data[i].b; sums[assignments[i]].count++; }
-                let changed = false;
-                for (let c = 0; c < k; c++) {
-                    if (sums[c].count > 0) {
-                        let nr = Math.round(sums[c].r/sums[c].count), ng = Math.round(sums[c].g/sums[c].count), nb = Math.round(sums[c].b/sums[c].count);
-                        if (centroids[c].r!==nr || centroids[c].g!==ng || centroids[c].b!==nb) { changed = true; centroids[c] = {r:nr,g:ng,b:nb}; }
-                    }
-                }
-                if (!changed) break;
-            }
-            return centroids;
-        }
-        function colorDist(r1,g1,b1,r2,g2,b2) { return (r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2; }
-        function rgbToHex(r,g,b) { return "#" + (1<<24|r<<16|g<<8|b).toString(16).slice(1).toUpperCase(); }
-
-    </script>
-</body>
-</html>
-
-
+           
