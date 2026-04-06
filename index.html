@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embroidify Pro - True Embroidery Digitizer & Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .checkerboard {
+            background-color: #e2e8f0;
+            background-image: 
+                linear-gradient(45deg, #cbd5e1 25%, transparent 25%, transparent 75%, #cbd5e1 75%, #cbd5e1),
+                linear-gradient(45deg, #cbd5e1 25%, transparent 25%, transparent 75%, #cbd5e1 75%, #cbd5e1);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        #loadingOverlay { display: none; }
+        .is-loading #loadingOverlay { display: flex; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col h-screen overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-indigo-800 text-white shadow-md py-3 px-6 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-wand-magic-sparkles text-2xl text-indigo-300"></i>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">Embroidify Pro</h1>
+                <p class="text-indigo-200 text-xs">Image Digitizer & Machine File (.DST/.EXP) Viewer</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <span id="modeBadge" class="hidden bg-indigo-600 text-xs font-bold px-3 py-1.5 rounded-full border border-indigo-400 shadow-sm">
+                Viewer Mode
+            </span>
+            <button onclick="document.getElementById('infoModal').classList.toggle('hidden')" class="bg-indigo-700 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-md transition text-sm font-medium border border-indigo-500">
+                <i class="fa-solid fa-circle-info mr-2"></i>Info
+            </button>
+        </div>
+    </header>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar p-8 relative">
+            <button onclick="document.getElementById('infoModal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl"><i class="fa-solid fa-times"></i></button>
+            <h2 class="text-2xl font-bold text-slate-800 mb-4 border-b pb-2">About Embroidify Pro</h2>
+            <div class="space-y-4 text-slate-600 text-sm leading-relaxed">
+                <p>This tool serves two powerful purposes for machine embroidery:</p>
+                
+                <h3 class="text-md font-bold text-slate-800 mt-4"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> 1. Image Digitizing</h3>
+                <p>Upload a standard image (.PNG, .JPG). The tool will intelligently reduce the colors, map an interlocking Tatami Fill stitch path across the color blocks, and generate downloadable machine binary files.</p>
+
+                <h3 class="text-md font-bold text-slate-800 mt-4"><i class="fa-solid fa-eye mr-2"></i> 2. Machine File Viewer</h3>
+                <p>Upload an existing <strong>.DST (Tajima)</strong> or <strong>.EXP (Melco)</strong> file. The app features a custom binary decoder that parses the proprietary relative jump and stitch instructions and simulates the physical needle path directly in your browser.</p>
+                
+                <div class="bg-slate-100 p-3 rounded mt-2 border border-slate-200 text-xs italic">
+                    Note: Machine files like .DST do not store actual RGB thread colors; they only store "Color Change" commands. When previewing uploaded files, generic distinct colors will be assigned to each color block.
+                </div>
+            </div>
+            <div class="mt-6 text-right">
+                <button onclick="document.getElementById('infoModal').classList.add('hidden')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="absolute inset-0 bg-slate-900/40 z-20 items-center justify-center backdrop-blur-sm">
+            <div class="bg-white px-8 py-6 rounded-xl shadow-2xl flex flex-col items-center">
+                <i class="fa-solid fa-gear fa-spin text-4xl text-indigo-600 mb-4"></i>
+                <p class="text-lg font-bold text-slate-800" id="loadingText">Processing...</p>
+            </div>
+        </div>
+
+        <!-- Left Sidebar: Controls -->
+        <aside class="w-full lg:w-80 bg-white border-r border-slate-200 p-5 flex flex-col gap-5 overflow-y-auto custom-scrollbar shrink-0 shadow-lg z-10">
+            
+            <!-- Upload -->
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">1. Input File</label>
+                <div class="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:bg-slate-50 transition cursor-pointer relative" id="uploadArea">
+                    <input type="file" id="fileInput" accept=".png, .jpg, .jpeg, .webp, .dst, .exp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-400 mb-2"></i>
+                    <p class="text-[11px] text-slate-600 font-medium truncate px-1" id="uploadText">Images (.png/.jpg) or Machine Files (.dst/.exp)</p>
+                </div>
+            </div>
+
+            <!-- Image Digitizing Settings -->
+            <div id="digitizerControls" class="space-y-4">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">2. Digitizing Parameters</label>
+                
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-slate-700">Thread Colors</span>
+                        <span id="colorsVal" class="text-indigo-600 font-bold">6</span>
+                    </div>
+                    <input type="range" id="colorsSlider" min="2" max="16" value="6" class="w-full accent-indigo-600">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-slate-700">Detail (Grid Width)</span>
+                        <span id="resolutionVal" class="text-indigo-600 font-bold">80</span>
+                    </div>
+                    <input type="range" id="resolutionSlider" min="30" max="150" value="80" step="10" class="w-full accent-indigo-600">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-slate-700">Physical Width</span>
+                        <span class="text-indigo-600 font-bold"><span id="sizeVal">10</span> cm</span>
+                    </div>
+                    <input type="range" id="sizeSlider" min="5" max="25" value="10" step="1" class="w-full accent-indigo-600">
+                </div>
+
+                <div class="flex items-center gap-2 bg-slate-50 p-2 rounded border border-slate-100">
+                    <input type="checkbox" id="ignoreWhite" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" checked>
+                    <label for="ignoreWhite" class="text-sm text-slate-700 font-medium cursor-pointer">Ignore white background</label>
+                </div>
+
+                <button id="btnDigitize" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-microchip mr-2"></i>Generate Path
+                </button>
+            </div>
+
+            <!-- Viewer Controls Message -->
+            <div id="viewerControls" class="hidden bg-slate-100 p-4 rounded-lg border border-slate-200">
+                <p class="text-sm text-slate-700 font-medium mb-2"><i class="fa-solid fa-eye text-indigo-600 mr-2"></i>Viewer Mode Active</p>
+                <p class="text-xs text-slate-500 leading-relaxed">You have uploaded a pre-digitized machine file. The stitch coordinates have been extracted and mapped to the canvas.</p>
+            </div>
+
+            <!-- Export Options -->
+            <div id="exportSection" class="mt-auto space-y-2 pt-4 border-t border-slate-200 hidden">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">3. Download Files</label>
+                <button id="btnExportDST" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium py-2 px-4 rounded-md transition flex items-center justify-between">
+                    <span><i class="fa-solid fa-download mr-2"></i>.DST File</span>
+                    <span class="text-[10px] bg-slate-600 px-1.5 py-0.5 rounded">Universal</span>
+                </button>
+                <button id="btnExportEXP" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium py-2 px-4 rounded-md transition flex items-center justify-between">
+                    <span><i class="fa-solid fa-download mr-2"></i>.EXP File</span>
+                    <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">Melco</span>
+                </button>
+                <button id="btnExportSVG" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-sm font-medium py-2 px-4 rounded-md transition flex items-center justify-between">
+                    <span><i class="fa-solid fa-bezier-curve mr-2"></i>.SVG File</span>
+                    <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">Vector</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Right Content: Viewer -->
+        <section class="flex-1 bg-slate-200 flex flex-col p-4 overflow-hidden relative">
+            
+            <!-- Statistics Overlay -->
+            <div id="statsOverlay" class="absolute top-6 left-6 z-10 bg-white/90 backdrop-blur shadow-sm border border-slate-200 rounded-lg p-3 hidden pointer-events-none">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Pattern Stats</div>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                    <span class="text-slate-600">Total Stitches:</span>
+                    <span id="statStitches" class="font-bold text-slate-800 text-right">0</span>
+                    <span class="text-slate-600">Color Changes:</span>
+                    <span id="statColors" class="font-bold text-slate-800 text-right">0</span>
+                    <span class="text-slate-600">Jumps:</span>
+                    <span id="statJumps" class="font-bold text-slate-800 text-right">0</span>
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="flex-1 rounded-xl border border-slate-300 shadow-inner overflow-hidden checkerboard flex items-center justify-center relative cursor-crosshair">
+                <p id="placeholderText" class="text-slate-500 font-medium flex flex-col items-center">
+                    <i class="fa-solid fa-ruler-combined text-5xl mb-4 opacity-40"></i>
+                    Upload an image or machine file (.dst/.exp)
+                </p>
+                <canvas id="outputCanvas" class="max-w-full max-h-full drop-shadow-2xl hidden"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <img id="sourceImage" class="hidden">
+
+    <script>
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const uploadText = document.getElementById('uploadText');
+        const sourceImage = document.getElementById('sourceImage');
+        
+        const digitizerControls = document.getElementById('digitizerControls');
+        const viewerControls = document.getElementById('viewerControls');
+        const modeBadge = document.getElementById('modeBadge');
+        const btnDigitize = document.getElementById('btnDigitize');
+        const exportSection = document.getElementById('exportSection');
+        
+        const outputCanvas = document.getElementById('outputCanvas');
+        const ctx = outputCanvas.getContext('2d');
+        const placeholderText = document.getElementById('placeholderText');
+        const statsOverlay = document.getElementById('statsOverlay');
+
+        // UI Sync
+        document.getElementById('colorsSlider').addEventListener('input', e => document.getElementById('colorsVal').textContent = e.target.value);
+        document.getElementById('resolutionSlider').addEventListener('input', e => document.getElementById('resolutionVal').textContent = e.target.value);
+        document.getElementById('sizeSlider').addEventListener('input', e => document.getElementById('sizeVal').textContent = e.target.value);
+
+        // State
+        let stitchPath = [];      // Absolute coordinate path {x, y, type}
+        let paletteColors = [];   // Hex strings
+
+        // High contrast default palette for parsed files (which don't store RGB)
+        const viewerPalette = [
+            "#2563EB", "#DC2626", "#059669", "#D97706", "#7C3AED", "#DB2777", 
+            "#0891B2", "#EA580C", "#4D7C0F", "#111827", "#475569", "#6D28D9"
+        ];
+
+        // --- 1. File Upload Routing ---
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            uploadText.textContent = file.name;
+            const ext = file.name.split('.').pop().toLowerCase();
+            
+            outputCanvas.classList.add('hidden');
+            exportSection.classList.add('hidden');
+            statsOverlay.classList.add('hidden');
+            
+            if (ext === 'dst' || ext === 'exp') {
+                // VIEWER MODE
+                digitizerControls.classList.add('hidden');
+                viewerControls.classList.remove('hidden');
+                modeBadge.classList.remove('hidden');
+                placeholderText.classList.add('hidden');
+                
+                document.body.classList.add('is-loading');
+                document.getElementById('loadingText').textContent = `Parsing .${ext.toUpperCase()} file...`;
+                
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    setTimeout(() => { // allow UI to paint loading
+                        try {
+                            const buffer = ev.target.result;
+                            const relativeCmds = ext === 'dst' ? parseDST(buffer) : parseEXP(buffer);
+                            buildAbsolutePathFromRelative(relativeCmds);
+                            
+                            // Assign standard palette
+                            paletteColors = [];
+                            for(let i=0; i<30; i++) paletteColors.push(viewerPalette[i % viewerPalette.length]);
+                            
+                            renderPreview();
+                            exportSection.classList.remove('hidden');
+                        } catch (err) {
+                            alert("Error parsing file: " + err.message);
+                        }
+                        document.body.classList.remove('is-loading');
+                    }, 50);
+                };
+                reader.readAsArrayBuffer(file);
+                
+            } else {
+                // DIGITIZER MODE
+                digitizerControls.classList.remove('hidden');
+                viewerControls.classList.add('hidden');
+                modeBadge.classList.add('hidden');
+                btnDigitize.disabled = false;
+                placeholderText.classList.remove('hidden');
+                placeholderText.innerHTML = '<i class="fa-solid fa-image text-green-500 text-5xl mb-3"></i><span>Image loaded. Click Generate!</span>';
+                
+                const reader = new FileReader();
+                reader.onload = (ev) => { sourceImage.src = ev.target.result; };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // --- 2. File Parsers (Binary Decoders) ---
+        
+        function parseDST(buffer) {
+            let view = new Uint8Array(buffer);
+            let cmds = [];
+            // DST header is 512 bytes, stitches start right after
+            for (let i = 512; i < view.length; i += 3) {
+                if (i + 2 >= view.length) break;
+                
+                let b0 = view[i], b1 = view[i+1], b2 = view[i+2];
+                if (b0 === 0 && b1 === 0 && b2 === 0xF3) {
+                    cmds.push({dx: 0, dy: 0, type: 'end'});
+                    break;
+                }
+                
+                let dx = 0, dy = 0;
+                // b0 mappings
+                if (b0 & 0x01) dx += 1;   if (b0 & 0x02) dx -= 1;
+                if (b0 & 0x04) dx += 9;   if (b0 & 0x08) dx -= 9;
+                if (b0 & 0x80) dy += 1;   if (b0 & 0x40) dy -= 1;
+                if (b0 & 0x20) dy += 9;   if (b0 & 0x10) dy -= 9;
+                
+                // b1 mappings
+                if (b1 & 0x01) dx += 3;   if (b1 & 0x02) dx -= 3;
+                if (b1 & 0x04) dx += 27;  if (b1 & 0x08) dx -= 27;
+                if (b1 & 0x80) dy += 3;   if (b1 & 0x40) dy -= 3;
+                if (b1 & 0x20) dy += 27;  if (b1 & 0x10) dy -= 27;
+                
+                // b2 mappings
+                if (b2 & 0x04) dx += 81;  if (b2 & 0x08) dx -= 81;
+                if (b2 & 0x20) dy += 81;  if (b2 & 0x10) dy -= 81;
+                
+                let type = 'stitch';
+                if ((b2 & 0xC3) === 0xC3) type = 'color_change'; // Sometimes uses both bits
+                else if (b2 & 0x40) type = 'color_change';
+                else if (b2 & 0x80) type = 'jump';
+                
+                cmds.push({dx, dy, type});
+            }
+            return cmds;
+        }
+
+        function parseEXP(buffer) {
+            let view = new Int8Array(buffer);  // Use Int8 for automatic two's complement (-128 to 127)
+            let uview = new Uint8Array(buffer); // Use Uint8 for checking control flags (128)
+            let cmds = [];
+            let i = 0;
+            
+            while (i < view.length - 1) {
+                let b0 = uview[i];
+                let b1 = uview[i+1];
+                
+                if (b0 === 128) { // 0x80 Control Code
+                    if (b1 === 1) { // Color Change (usually 4 bytes: 80 01 00 00)
+                        cmds.push({dx: 0, dy: 0, type: 'color_change'});
+                        i += 4; continue;
+                    }
+                    if (b1 === 4) { // Jump (usually 4 bytes: 80 04 dx dy)
+                        if (i+3 < view.length) {
+                            cmds.push({dx: view[i+2], dy: view[i+3], type: 'jump'});
+                        }
+                        i += 4; continue;
+                    }
+                    if (b1 === 128) { i += 4; continue; } // trim/ignore
+                }
+                
+                // Regular stitch
+                cmds.push({dx: view[i], dy: view[i+1], type: 'stitch'});
+                i += 2;
+            }
+            cmds.push({dx: 0, dy: 0, type: 'end'});
+            return cmds;
+        }
+
+        function bui
